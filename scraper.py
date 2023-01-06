@@ -1,3 +1,6 @@
+from PIL import ImageFont
+from PIL import ImageDraw
+from PIL import Image
 import bs4 as bs
 import requests
 import re
@@ -34,11 +37,56 @@ def top_artists(text_target, count=5):
     return artists_list[:count]
 
 
-def generate_photo(top_artist, top_tracks):
-    pass
+def collect_photo_of_artist(artist_name):
+    artist_name = artist_name.replace(' ', "+")
+    source = requests.get(f'https://www.google.com/search?q={artist_name}+spotify+photo')
+
+    soup = bs.BeautifulSoup(source.text, 'html.parser')
+    find_script = soup.find_all('a', {'class': 'BVG0Nb'})
+    parse_list = re.findall(r"https\:\/\/www\.google\.com\/imgres\?imgurl\=(https?\:\/\/.*)\&imgrefurl.*",str(find_script[0]['href']))
+    return parse_list[0]
+
+
+def generate_photo(top_artists, top_tracks):
+    img = Image.open('templates/librefm.jpg')
+    draw = ImageDraw.Draw(img)
+    # font = ImageFont.truetype(<font-file>, <font-size>)
+    font = ImageFont.truetype('font/Ubuntu-M.ttf', 35)
+
+    # Writing Top five artists
+    gg = 1040
+    for i in top_artists:
+        if len(i) > 20:
+            i = i.replace(i[20:], '...')
+        draw.text((150, gg + 46), i, (248, 215, 226), font=font)
+        gg = gg + 56
+    gg = 1040
+
+    # Writing top 5 musics
+    for i in top_tracks:
+        if len(i) > 20:
+            i = i.replace(i[20:], '...')
+        draw.text((640, gg + 46), i, (248, 215, 226), font=font)
+        gg = gg + 56
+
+        # Add my Info here
+        font3 = ImageFont.truetype('font/Ubuntu-M.ttf', 40)
+        draw.text((400, 1870), "Libre.fm Wrapped, By Hossein M", (211, 12, 45), font=font3)
+
+        # Insert Top artist Image
+        import urllib.request
+        urllib.request.urlretrieve(collect_photo_of_artist(top_artists[0]),"file_name")
+        artist_image = Image.open("file_name")
+        artist_image = artist_image.resize((600, 600))
+        img.paste(artist_image, (245, 182))
+
+    # saving the image
+    img.save('librefm-Wrapped.jpg')
+    print('Done!')
 
 
 if __name__ == '__main__':
     target = take_info('hosseinhimself')
-    print(top_tracks(target))
-    print(top_artists(target))
+    a = top_tracks(target)
+    b = top_artists(target)
+    generate_photo(b, a)
